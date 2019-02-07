@@ -1,0 +1,1017 @@
+{{- if and .Values.grafana.enabled .Values.grafana.defaultDashboardsEnabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-%s" (include "prometheus-operator.fullname" $) "k8s-cluster-namespaces" | trunc 63 | trimSuffix "-" }}
+  labels:
+    {{- if $.Values.grafana.sidecar.dashboards.label }}
+    {{ $.Values.grafana.sidecar.dashboards.label }}: "1"
+    {{- end }}
+    app: {{ template "prometheus-operator.name" $ }}-grafana
+{{ include "prometheus-operator.labels" $ | indent 4 }}
+data:
+  k8s-cluster-namespaces.json: |-
+    {
+      "annotations": {
+        "list": []
+      },
+      "description": "Kubernetes namespace metrics.",
+      "editable": false,
+      "gnetId": null,
+      "graphTooltip": 1,
+      "links": [],
+      "panels": [
+        {
+          "collapsed": false,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 0
+          },
+          "id": 8,
+          "panels": [],
+          "title": "Deployments",
+          "type": "row"
+        },
+        {
+          "columns": [],
+          "fontSize": "100%",
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 1
+          },
+          "id": 10,
+          "links": [],
+          "pageSize": null,
+          "scroll": true,
+          "showHeader": true,
+          "sort": {
+            "col": 1,
+            "desc": false
+          },
+          "styles": [
+            {
+              "alias": "",
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "pattern": "Time",
+              "type": "hidden"
+            },
+            {
+              "alias": "Deployment",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "deployment",
+              "thresholds": [],
+              "type": "string",
+              "unit": "short"
+            },
+            {
+              "alias": "Desired",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 0,
+              "mappingType": 1,
+              "pattern": "Value #A",
+              "thresholds": [],
+              "type": "number",
+              "unit": "short"
+            },
+            {
+              "alias": "Updated",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 0,
+              "mappingType": 1,
+              "pattern": "Value #B",
+              "thresholds": [
+                ""
+              ],
+              "type": "number",
+              "unit": "short"
+            },
+            {
+              "alias": "Available",
+              "colorMode": "cell",
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(50, 172, 45, 0.97)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 0,
+              "mappingType": 1,
+              "pattern": "Value #C",
+              "thresholds": [
+                "1"
+              ],
+              "type": "number",
+              "unit": "short"
+            },
+            {
+              "alias": "Unavailable",
+              "colorMode": "cell",
+              "colors": [
+                "rgba(50, 172, 45, 0.97)",
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(245, 54, 54, 0.9)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 0,
+              "mappingType": 1,
+              "pattern": "Value #D",
+              "thresholds": [
+                "1"
+              ],
+              "type": "number",
+              "unit": "short"
+            }
+          ],
+          "targets": [
+            {
+              "expr": "sum(\n  kube_deployment_status_replicas{namespace=~\"$namespace\"}\n) by(deployment)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "Desired",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(\n  kube_deployment_status_replicas_updated{namespace=~\"$namespace\"}\n) by(deployment)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "Updated",
+              "refId": "B"
+            },
+            {
+              "expr": "sum(\n  kube_deployment_status_replicas_available{namespace=~\"$namespace\"}\n) by(deployment)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "Available",
+              "refId": "C"
+            },
+            {
+              "expr": "sum(\n  kube_deployment_status_replicas_unavailable{namespace=~\"$namespace\"}\n) by(deployment)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "Unavailable",
+              "refId": "D"
+            }
+          ],
+          "title": "Deployment Replicas",
+          "transform": "table",
+          "type": "table"
+        },
+        {
+          "columns": [],
+          "fontSize": "100%",
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 9
+          },
+          "id": 11,
+          "interval": "",
+          "links": [],
+          "pageSize": null,
+          "scroll": true,
+          "showHeader": true,
+          "sort": {
+            "col": 1,
+            "desc": false
+          },
+          "styles": [
+            {
+              "alias": "",
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "pattern": "Time",
+              "type": "hidden"
+            },
+            {
+              "alias": "Deployment",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "deployment",
+              "thresholds": [],
+              "type": "string",
+              "unit": "short"
+            },
+            {
+              "alias": "Request / Pod",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "link": false,
+              "mappingType": 1,
+              "pattern": "Value #A",
+              "thresholds": [],
+              "type": "number",
+              "unit": "short"
+            },
+            {
+              "alias": "Limit / Pod",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #B",
+              "thresholds": [],
+              "type": "number",
+              "unit": "short"
+            },
+            {
+              "alias": "Avg. Usage / Pod",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 4,
+              "mappingType": 1,
+              "pattern": "Value #C",
+              "thresholds": [],
+              "type": "number",
+              "unit": "short"
+            },
+            {
+              "alias": "Avg. % Utilization / Pod",
+              "colorMode": "cell",
+              "colors": [
+                "rgba(50, 172, 45, 0.97)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(245, 54, 54, 0.9)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #D",
+              "thresholds": [
+                "80",
+                "90"
+              ],
+              "type": "number",
+              "unit": "percent"
+            }
+          ],
+          "targets": [
+            {
+              "expr": "sum(\n  max(\n    namespace_deployment_current_pod{namespace=~\"$namespace\"}\n    *\n    on(namespace, pod) group_right(deployment)\n    kube_pod_container_resource_requests_cpu_cores{\n      job=\"kube-state-metrics\",\n      service=\"prometheus-operator-kube-state-metrics\",\n      namespace=~\"$namespace\"\n    }\n  ) by(deployment, container)\n) by(deployment)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(\n  max(\n    namespace_deployment_current_pod{namespace=~\"$namespace\"}\n    *\n    on(namespace, pod) group_right(deployment)\n    kube_pod_container_resource_limits_cpu_cores{\n      job=\"kube-state-metrics\",\n      service=\"prometheus-operator-kube-state-metrics\",\n      namespace=~\"$namespace\"\n    }\n  ) by(deployment, container)\n) by(deployment)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "",
+              "refId": "B"
+            },
+            {
+              "expr": "avg(\n  label_replace(\n    namespace_deployment_current_pod{namespace=~\"$namespace\"},\n    \"pod_name\", \"$1\", \"pod\", \"(.*)\"\n  )\n  *\n  on(namespace, pod_name) group_right(deployment)\n  sum(\n    rate(\n      container_cpu_usage_seconds_total{\n        job=\"kubelet\",\n        container_name!=\"POD\",\n        container_name=~\".+\",\n        service=\"prometheus-operator-kubelet\",\n        namespace=~\"$namespace\"\n      }[1m]\n    )\n  ) by(namespace, pod_name)\n) by(deployment)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "",
+              "refId": "C"
+            },
+            {
+              "expr": "(\n  avg(\n    label_replace(\n      namespace_deployment_current_pod{namespace=~\"$namespace\"},\n      \"pod_name\", \"$1\", \"pod\", \"(.*)\"\n    )\n    *\n    on(namespace, pod_name) group_right(deployment)\n    sum(\n      rate(\n        container_cpu_usage_seconds_total{\n          job=\"kubelet\",\n          container_name!=\"POD\",\n          container_name=~\".+\",\n          service=\"prometheus-operator-kubelet\",\n          namespace=~\"$namespace\"\n        }[1m]\n      )\n    ) by(namespace, pod_name)\n  ) by(deployment)\n  /\n  sum(\n    max(\n      namespace_deployment_current_pod{namespace=~\"$namespace\"}\n      *\n      on(namespace, pod) group_right(deployment)\n      kube_pod_container_resource_requests_cpu_cores{\n        job=\"kube-state-metrics\",\n        service=\"prometheus-operator-kube-state-metrics\",\n        namespace=~\"$namespace\"\n      }\n    ) by(deployment, container)\n  ) by(deployment)\n) * 100",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "",
+              "refId": "D"
+            }
+          ],
+          "title": "Deployment CPUs",
+          "transform": "table",
+          "type": "table"
+        },
+        {
+          "columns": [],
+          "fontSize": "100%",
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 17
+          },
+          "id": 12,
+          "links": [],
+          "pageSize": null,
+          "scroll": true,
+          "showHeader": true,
+          "sort": {
+            "col": 1,
+            "desc": false
+          },
+          "styles": [
+            {
+              "alias": "",
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "pattern": "Time",
+              "type": "hidden"
+            },
+            {
+              "alias": "Deployment",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "deployment",
+              "thresholds": [],
+              "type": "string",
+              "unit": "short"
+            },
+            {
+              "alias": "Request / Pod",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #A",
+              "thresholds": [],
+              "type": "number",
+              "unit": "decbytes"
+            },
+            {
+              "alias": "Limit / Pod",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #B",
+              "thresholds": [],
+              "type": "number",
+              "unit": "decbytes"
+            },
+            {
+              "alias": "Avg. Usage / Pod",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #C",
+              "thresholds": [],
+              "type": "number",
+              "unit": "decbytes"
+            },
+            {
+              "alias": "Avg. % Utilization / Pod",
+              "colorMode": "cell",
+              "colors": [
+                "rgba(50, 172, 45, 0.97)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(245, 54, 54, 0.9)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #D",
+              "thresholds": [
+                "80",
+                "90"
+              ],
+              "type": "number",
+              "unit": "percent"
+            }
+          ],
+          "targets": [
+            {
+              "expr": "sum(\n  max(\n    namespace_deployment_current_pod{namespace=~\"$namespace\"}\n    *\n    on(namespace, pod) group_right(deployment)\n    kube_pod_container_resource_requests_memory_bytes{\n      job=\"kube-state-metrics\",\n      service=\"prometheus-operator-kube-state-metrics\",\n      namespace=~\"$namespace\"\n    }\n  ) by(deployment, container)\n) by(deployment)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(\n  max(\n    namespace_deployment_current_pod{namespace=~\"$namespace\"}\n    *\n    on(namespace, pod) group_right(deployment)\n    kube_pod_container_resource_limits_memory_bytes{\n      job=\"kube-state-metrics\",\n      service=\"prometheus-operator-kube-state-metrics\",\n      namespace=~\"$namespace\"\n    }\n  ) by(deployment, container)\n) by(deployment)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "",
+              "refId": "B"
+            },
+            {
+              "expr": "avg(\n  label_replace(\n    namespace_deployment_current_pod{namespace=~\"$namespace\"},\n    \"pod_name\", \"$1\", \"pod\", \"(.*)\"\n  )\n  *\n  on(namespace, pod_name) group_right(deployment)\n  sum(\n    container_memory_working_set_bytes{\n      job=\"kubelet\",\n      container_name!=\"POD\",\n      container_name=~\".+\",\n      service=\"prometheus-operator-kubelet\",\n      namespace=~\"$namespace\"\n    }\n  ) by(namespace, pod_name)\n) by(deployment)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "",
+              "refId": "C"
+            },
+            {
+              "expr": "avg(\n  label_replace(\n    namespace_deployment_current_pod{namespace=~\"$namespace\"},\n    \"pod_name\", \"$1\", \"pod\", \"(.*)\"\n  )\n  *\n  on(namespace, pod_name) group_right(deployment)\n  sum(\n    container_memory_working_set_bytes{\n      job=\"kubelet\",\n      container_name!=\"POD\",\n      container_name=~\".+\",\n      service=\"prometheus-operator-kubelet\",\n      namespace=~\"$namespace\"\n    }\n  ) by(namespace, pod_name)\n) by(deployment)\n/\nsum(\n  max(\n    namespace_deployment_current_pod{namespace=~\"$namespace\"}\n    *\n    on(namespace, pod) group_right(deployment)\n    kube_pod_container_resource_requests_memory_bytes{\n      job=\"kube-state-metrics\",\n      service=\"prometheus-operator-kube-state-metrics\",\n      namespace=~\"$namespace\"\n    }\n  ) by(deployment, container)\n) by(deployment)\n*\n100",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "refId": "D"
+            }
+          ],
+          "title": "Deployment Memories",
+          "transform": "table",
+          "type": "table"
+        },
+        {
+          "collapsed": false,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 25
+          },
+          "id": 6,
+          "panels": [],
+          "title": "StatefulSets",
+          "type": "row"
+        },
+        {
+          "columns": [],
+          "fontSize": "100%",
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 26
+          },
+          "id": 13,
+          "links": [],
+          "pageSize": null,
+          "scroll": true,
+          "showHeader": true,
+          "sort": {
+            "col": 1,
+            "desc": false
+          },
+          "styles": [
+            {
+              "alias": "",
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "pattern": "Time",
+              "type": "hidden"
+            },
+            {
+              "alias": "StatefulSet",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "statefulset",
+              "thresholds": [],
+              "type": "string",
+              "unit": "short"
+            },
+            {
+              "alias": "Desired",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 0,
+              "mappingType": 1,
+              "pattern": "Value #A",
+              "thresholds": [],
+              "type": "number",
+              "unit": "short"
+            },
+            {
+              "alias": "Updated",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 0,
+              "mappingType": 1,
+              "pattern": "Value #B",
+              "thresholds": [
+                ""
+              ],
+              "type": "number",
+              "unit": "short"
+            },
+            {
+              "alias": "Ready",
+              "colorMode": "cell",
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(50, 172, 45, 0.97)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 0,
+              "mappingType": 1,
+              "pattern": "Value #C",
+              "thresholds": [
+                "1"
+              ],
+              "type": "number",
+              "unit": "short"
+            },
+            {
+              "alias": "Not Ready",
+              "colorMode": "cell",
+              "colors": [
+                "rgba(50, 172, 45, 0.97)",
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(245, 54, 54, 0.9)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 0,
+              "mappingType": 1,
+              "pattern": "Value #D",
+              "thresholds": [
+                "1"
+              ],
+              "type": "number",
+              "unit": "short"
+            }
+          ],
+          "targets": [
+            {
+              "expr": "sum(\n  kube_statefulset_status_replicas{namespace=~\"$namespace\"}\n) by(statefulset)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "Desired",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(\n  kube_statefulset_status_replicas_updated{namespace=~\"$namespace\"}\n) by(statefulset)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "Updated",
+              "refId": "B"
+            },
+            {
+              "expr": "sum(\n  kube_statefulset_status_replicas_ready{namespace=~\"$namespace\"}\n) by(statefulset)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "Ready",
+              "refId": "C"
+            },
+            {
+              "expr": "sum(\n  kube_statefulset_status_replicas{job=\"kube-state-metrics\", namespace=~\"$namespace\"}\n  -\n  kube_statefulset_status_replicas_ready{job=\"kube-state-metrics\", namespace=~\"$namespace\"}\n) by(statefulset)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "Not Ready",
+              "refId": "D"
+            }
+          ],
+          "title": "StatefulSet Replicas",
+          "transform": "table",
+          "type": "table"
+        },
+        {
+          "columns": [],
+          "fontSize": "100%",
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 34
+          },
+          "id": 14,
+          "links": [],
+          "pageSize": null,
+          "scroll": true,
+          "showHeader": true,
+          "sort": {
+            "col": 1,
+            "desc": false
+          },
+          "styles": [
+            {
+              "alias": "",
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "pattern": "Time",
+              "type": "hidden"
+            },
+            {
+              "alias": "StatefulSet",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "statefulset",
+              "thresholds": [],
+              "type": "string",
+              "unit": "short"
+            },
+            {
+              "alias": "Request / Pod",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #A",
+              "thresholds": [],
+              "type": "number",
+              "unit": "short"
+            },
+            {
+              "alias": "Limit / Pod",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #B",
+              "thresholds": [],
+              "type": "number",
+              "unit": "short"
+            },
+            {
+              "alias": "Avg. Usage / Pod",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 4,
+              "mappingType": 1,
+              "pattern": "Value #C",
+              "thresholds": [],
+              "type": "number",
+              "unit": "short"
+            },
+            {
+              "alias": "Avg. % Utilization / Pod",
+              "colorMode": "cell",
+              "colors": [
+                "rgba(50, 172, 45, 0.97)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(245, 54, 54, 0.9)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #D",
+              "thresholds": [
+                "80",
+                "90"
+              ],
+              "type": "number",
+              "unit": "percent"
+            }
+          ],
+          "targets": [
+            {
+              "expr": "sum(\n  max(\n    namespace_statefulset_pod:kube_pod_owner{namespace=~\"$namespace\"}\n    *\n    on(namespace, pod) group_right(statefulset)\n    kube_pod_container_resource_requests_cpu_cores{\n      job=\"kube-state-metrics\",\n      service=\"prometheus-operator-kube-state-metrics\",\n      namespace=~\"$namespace\"\n    }\n  ) by(statefulset, container)\n) by(statefulset)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(\n  max(\n    namespace_statefulset_pod:kube_pod_owner{namespace=~\"$namespace\"}\n    *\n    on(namespace, pod) group_right(statefulset)\n    kube_pod_container_resource_limits_cpu_cores{\n      job=\"kube-state-metrics\",\n      service=\"prometheus-operator-kube-state-metrics\",\n      namespace=~\"$namespace\"\n    }\n  ) by(statefulset, container)\n) by(statefulset)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "",
+              "refId": "B"
+            },
+            {
+              "expr": "avg(\n  label_replace(\n    namespace_statefulset_pod:kube_pod_owner{namespace=~\"$namespace\"},\n    \"pod_name\", \"$1\", \"pod\", \"(.*)\"\n  )\n  *\n  on(namespace, pod_name) group_right(statefulset)\n  sum(\n    rate(\n      container_cpu_usage_seconds_total{\n        job=\"kubelet\",\n        container_name!=\"POD\",\n        container_name=~\".+\",\n        service=\"prometheus-operator-kubelet\",\n        namespace=~\"$namespace\"\n      }[1m]\n    )\n  ) by(namespace, pod_name)\n) by(statefulset)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "",
+              "refId": "C"
+            },
+            {
+              "expr": "(\n  avg(\n    label_replace(\n      namespace_statefulset_pod:kube_pod_owner{namespace=~\"$namespace\"},\n      \"pod_name\", \"$1\", \"pod\", \"(.*)\"\n    )\n    *\n    on(namespace, pod_name) group_right(statefulset)\n    sum(\n      rate(\n        container_cpu_usage_seconds_total{\n          job=\"kubelet\",\n          container_name!=\"POD\",\n          container_name=~\".+\",\n          service=\"prometheus-operator-kubelet\",\n          namespace=~\"$namespace\"\n        }[1m]\n      )\n    ) by(namespace, pod_name)\n  ) by(statefulset)\n  /\n  sum(\n    max(\n      namespace_statefulset_pod:kube_pod_owner{namespace=~\"$namespace\"}\n      *\n      on(namespace, pod) group_right(statefulset)\n      kube_pod_container_resource_requests_cpu_cores{\n        job=\"kube-state-metrics\",\n        service=\"prometheus-operator-kube-state-metrics\",\n        namespace=~\"$namespace\"\n      }\n    ) by(statefulset, container)\n  ) by(statefulset)\n) * 100",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "",
+              "refId": "D"
+            }
+          ],
+          "title": "StatefulSet CPUs",
+          "transform": "table",
+          "type": "table"
+        },
+        {
+          "columns": [],
+          "fontSize": "100%",
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 42
+          },
+          "id": 15,
+          "links": [],
+          "pageSize": null,
+          "scroll": true,
+          "showHeader": true,
+          "sort": {
+            "col": 1,
+            "desc": false
+          },
+          "styles": [
+            {
+              "alias": "",
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "pattern": "Time",
+              "type": "hidden"
+            },
+            {
+              "alias": "StatefulSet",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "statefulset",
+              "thresholds": [],
+              "type": "string",
+              "unit": "short"
+            },
+            {
+              "alias": "Request / Pod",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #A",
+              "thresholds": [],
+              "type": "number",
+              "unit": "decbytes"
+            },
+            {
+              "alias": "Limit / Pod",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #B",
+              "thresholds": [],
+              "type": "number",
+              "unit": "decbytes"
+            },
+            {
+              "alias": "Avg. Usage / Pod",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #C",
+              "thresholds": [],
+              "type": "number",
+              "unit": "decbytes"
+            },
+            {
+              "alias": "Avg. % Utilization / Pod",
+              "colorMode": "cell",
+              "colors": [
+                "rgba(50, 172, 45, 0.97)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(245, 54, 54, 0.9)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #D",
+              "thresholds": [
+                "80",
+                "90"
+              ],
+              "type": "number",
+              "unit": "percent"
+            }
+          ],
+          "targets": [
+            {
+              "expr": "sum(\n  max(\n    namespace_statefulset_pod:kube_pod_owner{namespace=~\"$namespace\"}\n    *\n    on(namespace, pod) group_right(statefulset)\n    kube_pod_container_resource_requests_memory_bytes{\n      job=\"kube-state-metrics\",\n      service=\"prometheus-operator-kube-state-metrics\",\n      namespace=~\"$namespace\"\n    }\n  ) by(statefulset, container)\n) by(statefulset)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(\n  max(\n    namespace_statefulset_pod:kube_pod_owner{namespace=~\"$namespace\"}\n    *\n    on(namespace, pod) group_right(statefulset)\n    kube_pod_container_resource_limits_memory_bytes{\n      job=\"kube-state-metrics\",\n      service=\"prometheus-operator-kube-state-metrics\",\n      namespace=~\"$namespace\"\n    }\n  ) by(statefulset, container)\n) by(statefulset)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "",
+              "refId": "B"
+            },
+            {
+              "expr": "avg(\n  label_replace(\n    namespace_statefulset_pod:kube_pod_owner{namespace=~\"$namespace\"},\n    \"pod_name\", \"$1\", \"pod\", \"(.*)\"\n  )\n  *\n  on(namespace, pod_name) group_right(statefulset)\n  sum(\n    container_memory_working_set_bytes{\n      job=\"kubelet\",\n      container_name!=\"POD\",\n      container_name=~\".+\",\n      service=\"prometheus-operator-kubelet\",\n      namespace=~\"$namespace\"\n    }\n  ) by(namespace, pod_name)\n) by(statefulset)",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "legendFormat": "",
+              "refId": "C"
+            },
+            {
+              "expr": "avg(\n  label_replace(\n    namespace_statefulset_pod:kube_pod_owner{namespace=~\"$namespace\"},\n    \"pod_name\", \"$1\", \"pod\", \"(.*)\"\n  )\n  *\n  on(namespace, pod_name) group_right(statefulset)\n  sum(\n    container_memory_working_set_bytes{\n      job=\"kubelet\",\n      container_name!=\"POD\",\n      container_name=~\".+\",\n      service=\"prometheus-operator-kubelet\",\n      namespace=~\"$namespace\"\n    }\n  ) by(namespace, pod_name)\n) by(statefulset)\n/\nsum(\n  max(\n    namespace_statefulset_pod:kube_pod_owner{namespace=~\"$namespace\"}\n    *\n    on(namespace, pod) group_right(statefulset)\n    kube_pod_container_resource_requests_memory_bytes{\n      job=\"kube-state-metrics\",\n      service=\"prometheus-operator-kube-state-metrics\",\n      namespace=~\"$namespace\"\n    }\n  ) by(statefulset, container)\n) by(statefulset)\n*\n100",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "refId": "D"
+            }
+          ],
+          "title": "StatefulSet Memories",
+          "transform": "table",
+          "type": "table"
+        }
+      ],
+      "refresh": "10s",
+      "schemaVersion": 16,
+      "style": "dark",
+      "tags": [
+        "kubernetes"
+      ],
+      "templating": {
+        "list": [
+          {
+            "current": {},
+            "hide": 2,
+            "label": null,
+            "name": "datasource",
+            "options": [],
+            "query": "prometheus",
+            "refresh": 1,
+            "regex": "",
+            "skipUrlSync": false,
+            "type": "datasource"
+          },
+          {
+            "allValue": ".*",
+            "current": {},
+            "datasource": "$datasource",
+            "definition": "label_values(kube_pod_info{job=\"kube-state-metrics\"}, namespace)",
+            "hide": 0,
+            "includeAll": false,
+            "label": "Namespace",
+            "multi": false,
+            "name": "namespace",
+            "options": [],
+            "query": "label_values(kube_pod_info{job=\"kube-state-metrics\"}, namespace)",
+            "refresh": 1,
+            "regex": "",
+            "skipUrlSync": false,
+            "sort": 1,
+            "tagValuesQuery": "",
+            "tags": [],
+            "tagsQuery": "",
+            "type": "query",
+            "useTags": false
+          }
+        ]
+      },
+      "time": {
+        "from": "now-30m",
+        "to": "now"
+      },
+      "timepicker": {
+        "refresh_intervals": [
+          "5s",
+          "10s",
+          "30s",
+          "1m",
+          "5m",
+          "15m",
+          "30m",
+          "1h",
+          "2h",
+          "1d"
+        ],
+        "time_options": [
+          "5m",
+          "15m",
+          "1h",
+          "6h",
+          "12h",
+          "24h",
+          "2d",
+          "7d",
+          "30d"
+        ]
+      },
+      "timezone": "browser",
+      "title": "Namespaces",
+      "uid": "k8s_grafname_y9Huwj",
+      "version": 0
+    }
+{{- end }}

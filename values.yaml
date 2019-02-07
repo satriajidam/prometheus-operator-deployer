@@ -1,0 +1,378 @@
+defaultRules:
+  create: true
+  # This namespace selector use regex to match a namespace.
+  # Default to match all namespaces.
+  namespaceSelector: '.*'
+
+## Configuration for alertmanager
+## ref: https://prometheus.io/docs/alerting/alertmanager/
+alertmanager:
+  enabled: true
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+  ## Alertmanager configuration directives
+  ## ref: https://prometheus.io/docs/alerting/configuration/#configuration-file
+  ##      https://prometheus.io/webtools/alerting/routing-tree-editor/
+  config:
+    global:
+      resolve_timeout: 5m
+      slack_api_url: <YOUR_SLACK_API_URL>
+    templates:
+    - '/etc/alertmanager/template/*.tmpl'
+    route:
+      group_by: ['alertname', 'namespace']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 3h
+      receiver: 'slack-notifications'
+      routes:
+      - match:
+          alertname: DeadMansSwitch
+        receiver: 'null'
+      - match:
+          alertname: TargetDown
+        receiver: 'null'
+    inhibit_rules:
+    - source_match:
+        severity: 'critical'
+      target_match:
+        severity: 'warning'
+      # Apply inhibition if the alertname is the same.
+      equal: ['alertname', 'namespace']
+    receivers:
+    - name: 'null'
+    - name: 'slack-notifications'
+      slack_configs:
+      - api_url: '<YOUR_SLACK_API_URL>'
+        channel: '<YOUR_SLACK_CHANNEL>'
+        username: '{{ template "slack.default.username" . }}'
+        color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+        title: >-
+          {{- if eq .Status "firing" }}
+          [{{ .Status | toUpper }}: {{ .Alerts.Firing | len }}] {{ (index .Alerts.Firing 0).Labels.alertname }}{{- if (index .Alerts.Firing 0).Labels.namespace }} in {{ (index .Alerts.Firing 0).Labels.namespace }}{{- end }}
+          {{- end }}
+          {{- if eq .Status "resolved" }}
+          [{{ .Status | toUpper }}: {{ .Alerts.Resolved | len }}] {{ (index .Alerts.Resolved 0).Labels.alertname }}{{- if (index .Alerts.Resolved 0).Labels.namespace }} in {{ (index .Alerts.Resolved 0).Labels.namespace }}{{- end }}
+          {{- end }}
+        title_link: '{{ template "slack.default.titlelink" . }}'
+        pretext: '{{ .CommonAnnotations.summary }}'
+        text: |-
+          {{ range .Alerts }}
+            {{- if .Annotations.summary }}*Alert:* {{ .Annotations.summary }} - `{{ .Labels.severity }}`{{- end }}
+            *Description:* {{ .Annotations.description }}{{ .Annotations.message }}
+            *Details:*
+            {{ range .Labels.SortedPairs }} • *{{ .Name }}:* `{{ .Value }}`
+            {{ end }}
+          {{ end }}
+        fallback: '{{ template "slack.default.fallback" . }}'
+        icon_emoji: '{{ template "slack.default.iconemoji" . }}'
+        icon_url: '{{ template "slack.default.iconurl" . }}'
+        send_resolved: true
+  service:
+    type: ClusterIP
+  serviceMonitor:
+    selfMonitor: true
+  ## Settings affecting alertmanagerSpec
+  ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#alertmanagerspec
+  alertmanagerSpec:
+    image:
+      repository: quay.io/prometheus/alertmanager
+      tag: v0.15.3
+    logLevel: info
+    replicas: 3
+    retention: 120h
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: fast
+          accessModes:
+          - ReadWriteOnce
+          resources:
+            requests:
+              storage: 2Gi
+    paused: false
+    nodeSelector: {}
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+    podAntiAffinity: soft
+    listenLocal: false
+
+## Grafana Configuration
+## Sample values: https://github.com/helm/charts/blob/master/stable/grafana/values.yaml
+grafana:
+  enabled: true
+  fullnameOverride: grafana
+  replicas: 2
+  deploymentStrategy: RollingUpdate
+  livenessProbe:
+    httpGet:
+      path: /api/health
+      port: 3000
+    initialDelaySeconds: 20
+    timeoutSeconds: 10
+    successThreshold: 1
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /api/health
+      port: 3000
+    initialDelaySeconds: 30
+    timeoutSeconds: 10
+    successThreshold: 1
+    failureThreshold: 3
+  image:
+    repository: grafana/grafana
+    tag: 5.4.3
+  service:
+    type: ClusterIP
+    port: 80
+  defaultDashboardsEnabled: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 96Mi
+    limits:
+      cpu: 50m
+      memory: 96Mi
+  nodeSelector: {}
+  persistence:
+    enabled: false
+  adminUser: <YOUR_GRAFANA_ADMIN_USERNAME>
+  adminPassword: <YOUR_GRAFANA_ADMIN_PASSWORD>
+  plugins:
+  - grafana-clock-panel
+  grafana.ini:
+    paths:
+      data: /var/lib/grafana/data
+      logs: /var/log/grafana
+      plugins: /var/lib/grafana/plugins
+      provisioning: /etc/grafana/provisioning
+    server:
+      domain: grafana.monitoring.svc.cluster.local
+      enforce_domain: false
+      root_url: http://grafana.monitoring.svc.cluster.local
+    database:
+      url: <YOUR_GRAFANA_MYSQL_URL>
+      type: mysql
+      name: <YOUR_GRAFANA_MYSQL_DATABASE>
+      user: <YOUR_GRAFANA_MYSQL_USERNAME>
+      password: <YOUR_GRAFANA_MYSQL_PASSWORD>
+    users:
+      allow_sign_up: false
+      allow_org_create: false
+      auto_assign_org: true
+      auto_assign_org_role: Viewer
+      default_theme: dark
+    analytics:
+      reporting_enabled: true
+      check_for_updates: true
+    dashboards:
+      versions_to_keep: 20
+    log:
+      mode: console
+      level: info
+    alerting:
+      enabled: true
+      execute_alerts: true
+    grafana_com:
+      url: https://grafana.com
+  sidecar:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 96Mi
+      limits:
+        cpu: 50m
+        memory: 96Mi
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      folder: /tmp/dashboards
+      searchNamespace: ALL
+    datasources:
+      enabled: true
+      label: grafana_datasource
+      searchNamespace: ALL
+
+## Component scraping the kube api server
+kubeApiServer:
+  enabled: true
+  tlsConfig:
+    serverName: kubernetes
+    insecureSkipVerify: true
+  serviceMonitor:
+    jobLabel: component
+    selector:
+      matchLabels:
+        component: apiserver
+        provider: kubernetes
+
+## Component scraping the kubelet and kubelet-hosted cAdvisor
+kubelet:
+  enabled: true
+  namespace: kube-system
+  serviceMonitor:
+    https: false
+
+## Component scraping the kube controller manager
+kubeControllerManager:
+  enabled: false
+
+## Component scraping coreDns. Use either this or kubeDns
+coreDns:
+  enabled: false
+  service:
+    port: 9153
+    targetPort: 9153
+    selector:
+      k8s-app: coredns
+
+## Component scraping kubeDns. Use either this or coreDns
+kubeDns:
+  enabled: false
+  service:
+    selector:
+      k8s-app: kube-dns
+
+## Component scraping etcd
+kubeEtcd:
+  enabled: false
+
+## Component scraping kube scheduler
+kubeScheduler:
+  enabled: false
+
+## Component scraping kube state metrics
+kubeStateMetrics:
+  enabled: true
+
+## kube-state-metrics configuration
+kube-state-metrics:
+  image:
+    repository: quay.io/coreos/kube-state-metrics
+    tag: v1.5.0
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+  nodeSelector: {}
+  collectors:
+    cronjobs: true
+    daemonsets: true
+    deployments: true
+    endpoints: true
+    horizontalpodautoscalers: true
+    jobs: true
+    limitranges: true
+    namespaces: true
+    nodes: true
+    persistentvolumeclaims: true
+    persistentvolumes: true
+    pods: true
+    replicasets: true
+    replicationcontrollers: true
+    resourcequotas: true
+    services: true
+    statefulsets: true
+
+## Deploy node exporter as a daemonset to all nodes
+nodeExporter:
+  enabled: true
+
+## prometheus-node-exporter configuration
+prometheus-node-exporter:
+  image:
+    repository: quay.io/prometheus/node-exporter
+    tag: v0.17.0
+  service:
+    type: ClusterIP
+  priorityClassName: high-priority
+  extraArgs:
+  - --collector.filesystem.ignored-mount-points=^/(dev|proc|sys|var/lib/docker/.+)($|/)
+  - --collector.filesystem.ignored-fs-types=^(autofs|binfmt_misc|cgroup|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|mqueue|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|sysfs|tracefs)$
+
+## Manages Prometheus and Alertmanager components
+prometheusOperator:
+  enabled: true
+  serviceAccount:
+    create: true
+  createCustomResource: true
+  cleanupCustomResource: true
+  kubeletService:
+    enabled: true
+    namespace: kube-system
+  serviceMonitor:
+    selfMonitor: true
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+  nodeSelector: {}
+
+## Deploy a Prometheus instance
+prometheus:
+  enabled: true
+  service:
+    type: ClusterIP
+  rbac:
+    roleNamespaces: []
+    # List of namespaces to add to prometheus RBAC
+    # Example:
+    # - default
+    # - kube-public
+    # - kube-system
+    # - monitoring
+    # - production
+    # - staging
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+  serviceMonitor:
+    selfMonitor: true
+  ## Settings affecting prometheusSpec
+  ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheusspec
+  prometheusSpec:
+    scrapeInterval: 60s
+    evaluationInterval: 60s
+    listenLocal: false
+    image:
+      repository: quay.io/prometheus/prometheus
+      tag: v2.6.1
+    nodeSelector: {}
+    retention: 9d
+    paused: false
+    replicas: 2
+    logLevel: info
+    podAntiAffinity: soft
+    resources:
+      requests:
+        cpu: 1000m
+        memory: 4Gi
+      limits:
+        cpu: 2000m
+        memory: 8Gi
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: fast
+          accessModes:
+          - ReadWriteOnce
+          resources:
+            requests:
+              storage: 20Gi
+    additionalScrapeConfigs: []

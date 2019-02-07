@@ -1,0 +1,348 @@
+# Generated from 'kubernetes-resources' group from https://raw.githubusercontent.com/coreos/prometheus-operator/master/contrib/kube-prometheus/manifests/prometheus-rules.yaml
+{{- if and .Values.defaultRules.create }}
+apiVersion: {{ printf "%s/v1" (.Values.prometheusOperator.crdApiGroup | default "monitoring.coreos.com") }}
+kind: PrometheusRule
+metadata:
+  name: {{ printf "%s-%s" (include "prometheus-operator.fullname" .) "kubernetes-resources" | trunc 63 | trimSuffix "-" }}
+  labels:
+    app: {{ template "prometheus-operator.name" . }}
+{{ include "prometheus-operator.labels" . | indent 4 }}
+{{- if .Values.defaultRules.labels }}
+{{ toYaml .Values.defaultRules.labels | indent 4 }}
+{{- end }}
+{{- if .Values.defaultRules.annotations }}
+  annotations:
+{{ toYaml .Values.defaultRules.annotations | indent 4 }}
+{{- end }}
+spec:
+  groups:
+  - name: kubernetes-resources
+    rules:
+    - alert: KubeDeploymentCPUUtilizationReachEightyPercent
+      annotations:
+        message: CPU utilization for Deployment {{`{{ $labels.namespace }}`}}/{{`{{ $labels.deployment }}`}} has reached 80%.
+      expr: |-
+        (
+          sum by (namespace, deployment) (
+            label_replace(
+              namespace_deployment_current_pod{namespace=~"{{ .Values.defaultRules.namespaceSelector }}"},
+              "pod_name", "$1", "pod", "(.*)"
+            )
+            *
+            on(namespace, pod_name) group_right(deployment)
+            sum(rate(container_cpu_usage_seconds_total{
+              job="kubelet",
+              container_name!="POD",
+              container_name=~".+",
+              service="prometheus-operator-kubelet",
+              namespace=~"{{ .Values.defaultRules.namespaceSelector }}"
+            }[5m])) by(namespace, pod_name)
+          )
+          /
+          sum by (namespace, deployment) (
+            namespace_deployment_current_pod{namespace=~"{{ .Values.defaultRules.namespaceSelector }}"}
+            *
+            on(namespace, pod) group_right(deployment)
+            kube_pod_container_resource_requests_cpu_cores{
+              job="kube-state-metrics",
+              service="prometheus-operator-kube-state-metrics",
+              namespace=~"{{ .Values.defaultRules.namespaceSelector }}"
+            }
+          ) * 100
+        ) >= 80
+      for: 5m
+      labels:
+        severity: warning
+    - alert: KubeStatefulSetCPUUtilizationReachEightyPercent
+      annotations:
+        message: CPU utilization for StatefulSet {{`{{ $labels.namespace }}`}}/{{`{{ $labels.statefulset }}`}} has reached 80%.
+      expr: |-
+        (
+          sum by (namespace, statefulset) (
+            label_replace(
+              namespace_statefulset_pod:kube_pod_owner{namespace=~"{{ .Values.defaultRules.namespaceSelector }}"},
+              "pod_name", "$1", "pod", "(.*)"
+            )
+            *
+            on(namespace, pod_name) group_right(statefulset)
+            sum(rate(container_cpu_usage_seconds_total{
+              job="kubelet",
+              container_name!="POD",
+              container_name=~".+",
+              service="prometheus-operator-kubelet",
+              namespace=~"{{ .Values.defaultRules.namespaceSelector }}"
+            }[5m])) by(namespace, pod_name)
+          )
+          /
+          sum by (namespace, statefulset) (
+            namespace_statefulset_pod:kube_pod_owner{namespace=~"{{ .Values.defaultRules.namespaceSelector }}"}
+            *
+            on(namespace, pod) group_right(statefulset)
+            kube_pod_container_resource_requests_cpu_cores{
+              job="kube-state-metrics",
+              service="prometheus-operator-kube-state-metrics",
+              namespace=~"{{ .Values.defaultRules.namespaceSelector }}"
+            }
+          ) * 100
+        ) >= 80
+      for: 5m
+      labels:
+        severity: warning
+    - alert: KubeDeploymentContainerCPUUtilizationLessThanTenPercent
+      annotations:
+        message: Container {{`{{ $labels.container }}`}} in Deployment {{`{{ $labels.namespace }}`}}/{{`{{ $labels.deployment }}`}}
+          has {{`{{ printf "%0.2f" $value }}`}}% 7 days average CPU utilization which is less than recommended minimum of 10% utilization.
+      expr: |-
+        (
+          label_join(
+            avg by(namespace, deployment, container) (              
+              label_replace(
+                namespace_deployment_current_pod{namespace=~"{{ .Values.defaultRules.namespaceSelector }}"},
+                "pod_name", "$1", "pod", "(.*)"
+              )
+              *
+              on(namespace, pod_name) group_right(deployment)
+              label_replace(
+                rate(container_cpu_usage_seconds_total{
+                  job="kubelet",
+                  container_name!="POD",
+                  container_name=~".+",
+                  service="prometheus-operator-kubelet",
+                  namespace=~"{{ .Values.defaultRules.namespaceSelector }}"
+                }[7d]),
+                "container", "$1", "container_name", "(.*)"
+              )
+            ),
+            "path", "/", "namespace", "deployment", "container"
+          )
+          /
+          on(path) group_left(container)
+          label_join(
+            avg by(namespace, deployment, container) (
+              namespace_deployment_current_pod{namespace=~"{{ .Values.defaultRules.namespaceSelector }}"}
+              *
+              on(namespace, pod) group_right(deployment)
+              kube_pod_container_resource_requests_cpu_cores{
+                job="kube-state-metrics",
+                service="prometheus-operator-kube-state-metrics",
+                namespace=~"{{ .Values.defaultRules.namespaceSelector }}"
+              }
+            ),
+            "path", "/", "namespace", "deployment", "container"
+          ) * 100
+        ) < 10
+      for: 7d
+      labels:
+        severity: warning
+    - alert: KubeDeploymentContainerMemoryUtilizationLessThanTwentyPercent
+      annotations:
+        message: Container {{`{{ $labels.container }}`}} in Deployment {{`{{ $labels.namespace }}`}}/{{`{{ $labels.deployment }}`}}
+          has {{`{{ printf "%0.2f" $value }}`}}% 7 days average Memory utilization which is less than recommended minimum of 20% utilization.
+      expr: |-
+        (
+          label_join(
+            avg by(namespace, deployment, container) (              
+              label_replace(
+                namespace_deployment_current_pod{namespace=~"{{ .Values.defaultRules.namespaceSelector }}"},
+                "pod_name", "$1", "pod", "(.*)"
+              )
+              *
+              on(namespace, pod_name) group_right(deployment)
+              label_replace(
+                avg_over_time(container_memory_working_set_bytes{
+                  job="kubelet",
+                  container_name!="POD",
+                  container_name=~".+",
+                  service="prometheus-operator-kubelet",
+                  namespace=~"{{ .Values.defaultRules.namespaceSelector }}"
+                }[7d]),
+                "container", "$1", "container_name", "(.*)"
+              )
+            ),
+            "path", "/", "namespace", "deployment", "container"
+          )
+          /
+          on(path) group_left(container)
+          label_join(
+            avg by(namespace, deployment, container) (
+              namespace_deployment_current_pod{namespace=~"{{ .Values.defaultRules.namespaceSelector }}"}
+              *
+              on(namespace, pod) group_right(deployment)
+              kube_pod_container_resource_requests_memory_bytes{
+                job="kube-state-metrics",
+                service="prometheus-operator-kube-state-metrics",
+                namespace=~"{{ .Values.defaultRules.namespaceSelector }}"
+              }
+            ),
+            "path", "/", "namespace", "deployment", "container"
+          ) * 100
+        ) < 20
+      for: 7d
+      labels:
+        severity: warning
+    - alert: KubeStatefulSetContainerCPUUtilizationLessThanTenPercent
+      annotations:
+        message: Container {{`{{ $labels.container }}`}} in StatefulSet {{`{{ $labels.namespace }}`}}/{{`{{ $labels.statefulset }}`}}
+          has {{`{{ printf "%0.2f" $value }}`}}% 7 days average CPU utilization which is less than recommended minimum of 10% utilization.
+      expr: |-
+        (
+          label_join(
+            avg by(namespace, statefulset, container) (              
+              label_replace(
+                namespace_statefulset_pod:kube_pod_owner{namespace=~"{{ .Values.defaultRules.namespaceSelector }}"},
+                "pod_name", "$1", "pod", "(.*)"
+              )
+              *
+              on(namespace, pod_name) group_right(statefulset)
+              label_replace(
+                rate(container_cpu_usage_seconds_total{
+                  job="kubelet",
+                  container_name!="POD",
+                  container_name=~".+",
+                  service="prometheus-operator-kubelet",
+                  namespace=~"{{ .Values.defaultRules.namespaceSelector }}"
+                }[7d]),
+                "container", "$1", "container_name", "(.*)"
+              )
+            ),
+            "path", "/", "namespace", "statefulset", "container"
+          )
+          /
+          on(path) group_left(container)
+          label_join(
+            avg by(namespace, statefulset, container) (
+              namespace_statefulset_pod:kube_pod_owner{namespace=~"{{ .Values.defaultRules.namespaceSelector }}"}
+              *
+              on(namespace, pod) group_right(statefulset)
+              kube_pod_container_resource_requests_cpu_cores{
+                job="kube-state-metrics",
+                service="prometheus-operator-kube-state-metrics",
+                namespace=~"{{ .Values.defaultRules.namespaceSelector }}"
+              }
+            ),
+            "path", "/", "namespace", "statefulset", "container"
+          ) * 100
+        ) < 10
+      for: 7d
+      labels:
+        severity: warning
+    - alert: KubeStatefulSetContainerMemoryUtilizationLessThanTwentyPercent
+      annotations:
+        message: Container {{`{{ $labels.container }}`}} in StatefulSet {{`{{ $labels.namespace }}`}}/{{`{{ $labels.statefulset }}`}}
+          has {{`{{ printf "%0.2f" $value }}`}}% 7 days average Memory utilization which is less than recommended minimum of 20% utilization.
+      expr: |-
+        (
+          label_join(
+            avg by(namespace, statefulset, container) (              
+              label_replace(
+                namespace_statefulset_pod:kube_pod_owner{namespace=~"{{ .Values.defaultRules.namespaceSelector }}"},
+                "pod_name", "$1", "pod", "(.*)"
+              )
+              *
+              on(namespace, pod_name) group_right(statefulset)
+              label_replace(
+                avg_over_time(container_memory_working_set_bytes{
+                  job="kubelet",
+                  container_name!="POD",
+                  container_name=~".+",
+                  service="prometheus-operator-kubelet",
+                  namespace=~"{{ .Values.defaultRules.namespaceSelector }}"
+                }[7d]),
+                "container", "$1", "container_name", "(.*)"
+              )
+            ),
+            "path", "/", "namespace", "statefulset", "container"
+          )
+          /
+          on(path) group_left(container)
+          label_join(
+            avg by(namespace, statefulset, container) (
+              namespace_statefulset_pod:kube_pod_owner{namespace=~"{{ .Values.defaultRules.namespaceSelector }}"}
+              *
+              on(namespace, pod) group_right(statefulset)
+              kube_pod_container_resource_requests_memory_bytes{
+                job="kube-state-metrics",
+                service="prometheus-operator-kube-state-metrics",
+                namespace=~"{{ .Values.defaultRules.namespaceSelector }}"
+              }
+            ),
+            "path", "/", "namespace", "statefulset", "container"
+          ) * 100
+        ) < 20
+      for: 7d
+      labels:
+        severity: warning
+    - alert: KubeCPUOvercommit
+      annotations:
+        message: Cluster has overcommitted CPU resource requests for Pods and cannot tolerate node failure.
+      expr: |-
+        sum(namespace_name:kube_pod_container_resource_requests_cpu_cores:sum{namespace=~"{{ .Values.defaultRules.namespaceSelector }}"})
+        /
+        sum(node:node_num_cpu:sum)
+        >
+        (count(node:node_num_cpu:sum) - 1)
+        /
+        count(node:node_num_cpu:sum)
+      for: 5m
+      labels:
+        severity: warning
+    - alert: KubeMemOvercommit
+      annotations:
+        message: Cluster has overcommitted memory resource requests for Pods and cannot tolerate node failure.
+      expr: |-
+        (
+          sum(namespace_name:kube_pod_container_resource_requests_memory_bytes:sum{namespace=~"{{ .Values.defaultRules.namespaceSelector }}"})
+          /
+          sum(node_memory_MemTotal_bytes)
+        )
+        >
+        (
+          (count(node:node_num_cpu:sum) - 1)
+          /
+          count(node:node_num_cpu:sum)
+        )
+      for: 5m
+      labels:
+        severity: warning
+    - alert: KubeCPUOvercommit
+      annotations:
+        message: Cluster has overcommitted CPU resource requests for Namespaces.
+      expr: |-
+        sum(
+          kube_resourcequota{job="kube-state-metrics", type="hard", resource="requests.cpu", namespace=~"{{ .Values.defaultRules.namespaceSelector }}"}
+        )
+        /
+        sum(node:node_num_cpu:sum)
+        > 1.5
+      for: 5m
+      labels:
+        severity: warning
+    - alert: KubeMemOvercommit
+      annotations:
+        message: Cluster has overcommitted memory resource requests for Namespaces.
+      expr: |-
+        sum(
+          kube_resourcequota{job="kube-state-metrics", type="hard", resource="requests.memory", namespace=~"{{ .Values.defaultRules.namespaceSelector }}"}
+        )
+        /
+        sum(node_memory_MemTotal_bytes{job="node-exporter"})
+        > 1.5
+      for: 5m
+      labels:
+        severity: warning
+    - alert: KubeQuotaExceeded
+      annotations:
+        message: Namespace {{`{{ $labels.namespace }}`}} is using {{`{{ printf "%0.0f" $value }}`}}% of its {{`{{ $labels.resource }}`}} quota.
+      expr: |-
+        100 * kube_resourcequota{job="kube-state-metrics", type="used", namespace=~"{{ .Values.defaultRules.namespaceSelector }}"}
+        /
+        ignoring(instance, job, type)
+        (
+          kube_resourcequota{job="kube-state-metrics", type="hard", namespace=~"{{ .Values.defaultRules.namespaceSelector }}"}
+          > 0
+        )
+        > 90
+      for: 15m
+      labels:
+        severity: warning
+{{- end }}
